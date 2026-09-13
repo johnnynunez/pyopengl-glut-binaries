@@ -1,0 +1,14 @@
+# The distribution is a binary payload. A line-ending translation on checkout
+# would rewrite bytes inside a DLL, and the file would still look plausible --
+# it would simply fail to load, on the users' machines rather than here.
+*.dll binary
+# tools/gle32.zip, the archive three of the shipped GLE files came out of.
+*.zip binary
+
+# The upstream licence and readme files ship verbatim, so they are not ours to
+# re-line-end either: a redistributed licence should be byte-for-byte what was
+# given to us.
+src/pyopengl_glut_binaries/DLLS/*.txt -text
+src/pyopengl_glut_binaries/DLLS/gle_AUTHORS -text
+src/pyopengl_glut_binaries/DLLS/gle_COPYING -text
+src/pyopengl_glut_binaries/DLLS/gle_COPYING.src -text

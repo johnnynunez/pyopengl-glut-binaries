@@ -1,0 +1,99 @@
+name: tests
+
+on:
+  # This project's own develop, and pull requests. `release.yml` runs this on
+  # every push to main and then decides whether the version is worth
+  # publishing, so main is covered from there rather than by a `push:` trigger
+  # here -- which would run the whole matrix twice per push.
+  push:
+    branches: [develop]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  # Both platforms, because the two halves of the question are on different
+  # machines: that the files are present and named as PyOpenGL asks for them is
+  # answerable anywhere, and that a checkout of a binary payload survives the
+  # runner's line-ending settings is only answerable on Windows, where the
+  # translation that would corrupt a DLL is the one that is switched on.
+  #
+  # The interpreter floor and ceiling only. The package is data with a path
+  # constant over it and imports nothing but `os`, so the rows between them
+  # would be the same test of the same code.
+  test:
+    name: ${{ matrix.python-version }} · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.9", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run the suite
+        run: python -m pytest
+
+  # The DLLs are the distribution, so the case that matters most is whether
+  # they arrive in what a user receives. `tests/` builds a wheel and reads it;
+  # this does the other half, installing the built artifact somewhere that is
+  # not the checkout and asking the installed copy.
+  install:
+    name: the built wheel carries the libraries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build and install the wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+          python -m pip install --no-index dist/*.whl
+      - name: Ask the installed copy, from outside the checkout
+        working-directory: /tmp
+        run: |
+          python - <<'EOF'
+          import os
+          import pyopengl_glut_binaries as binaries
+          present = sorted(os.listdir(binaries.DLL_DIRECTORY))
+          missing = [name for name in binaries.BUILDS
+                     if name + '.dll' not in present]
+          if missing:
+              raise SystemExit('installed but missing: %s' % (missing,))
+          print('%d files in %s' % (len(present), binaries.DLL_DIRECTORY))
+          EOF
+
+  quality:
+    name: lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: ruff
+        run: |
+          python -m ruff check .
+          python -m ruff format --check .
+      # The package, as every project in this workspace scopes it. The suite is
+      # not in the gate: `disallow_untyped_defs` over a file of `def
+      # test_x(self)` buys annotations nobody reads, and what the suite is for
+      # is running.
+      - name: mypy
+        run: python -m mypy src/pyopengl_glut_binaries

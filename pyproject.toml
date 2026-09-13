@@ -1,0 +1,106 @@
+[build-system]
+# setuptools 70.1 is the floor for `setuptools.command.bdist_wheel`, which
+# setup.py subclasses to tag the wheel; 77 is what the rest of this workspace
+# builds with, so the floor is set there rather than lower.
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PyOpenGL-glut-binaries"
+# Read from src/pyopengl_glut_binaries/__init__.py -- see
+# [tool.setuptools.dynamic] below. One definition, because
+# .github/workflows/release.yml decides whether to publish by reading
+# `__version__`, and a second copy here that drifted from it would mean the
+# version checked against PyPI was not the version built.
+dynamic = ["version"]
+description = "Prebuilt Windows freeglut and GLE libraries for PyOpenGL"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+# The DLLs are loaded through ctypes, so no interpreter is excluded by them.
+# The floor is PyOpenGL's own, since nothing else installs this.
+requires-python = ">=3.9"
+authors = [
+    { name = "Mike C. Fletcher", email = "mcfletch@vrplumber.com" }
+]
+keywords = ["OpenGL", "GLUT", "freeglut", "GLE", "PyOpenGL", "Windows"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering",
+]
+
+# None. The package is data with a path constant over it, and PyOpenGL depends
+# on this rather than the other way round -- naming PyOpenGL here would make
+# the two require each other.
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest"]
+dev = ["pyopengl-glut-binaries[test]", "mypy", "ruff", "build"]
+
+[project.urls]
+Homepage = "https://github.com/mcfletch/pyopengl-glut-binaries"
+Repository = "https://github.com/mcfletch/pyopengl-glut-binaries"
+Issues = "https://github.com/mcfletch/pyopengl/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "pyopengl_glut_binaries.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Named here rather than left to `include-package-data` and a MANIFEST.in line.
+# That default -- in another project's tool, and true only for a project
+# configured through pyproject.toml -- is what every Windows GLUT user has
+# depended on until now, and #127 is what it looks like when the files do not
+# arrive. `DLLS/` holds no `__init__.py`, so `packages.find` above does not see
+# it and this line is the only thing that ships it.
+[tool.setuptools.package-data]
+pyopengl_glut_binaries = ["py.typed", "DLLS/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "src"]
+addopts = "-ra --doctest-modules --import-mode=importlib"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+# `tools/` holds the recipes the binaries were built from, kept for
+# provenance. They want Visual Studio 2008 and URLs from 2011, so nothing here
+# can run them and a change to them cannot be tested -- which makes tidying
+# them a silent risk rather than an improvement. They are preserved as they
+# were. See tools/README.md.
+exclude = ["tools"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "B", "ARG", "I", "UP", "SIM", "C4", "RUF"]
+ignore = [
+    "E501",   # line too long: held by the formatter's line-length, above
+    # Diagnostics are written with `%` formatting throughout, so that the
+    # message and the values it interpolates read as two separate things.
+    "UP031",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+exclude = ["*.md"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+# uv decides whether its cached metadata for a source tree is still current
+# from pyproject.toml, setup.py and setup.cfg alone. The version lives in
+# src/pyopengl_glut_binaries/__init__.py, so name that file too.
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "src/pyopengl_glut_binaries/__init__.py" },
+]

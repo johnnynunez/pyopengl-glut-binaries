@@ -16,7 +16,7 @@ despite the name GLE referring to the GLE project for a very long time (they too
 due to such a takedown notice).
 """
 from __future__ import print_function
-import sys, os, subprocess, requests, logging, platform, shutil, glob
+import sys, os, subprocess, requests, logging, platform, shutil, glob, contextlib
 log = logging.getLogger( 'buildgle' )
 
 DOWNLOAD_URL = 'http://downloads.sourceforge.net/project/gle/gle/gle-3.1.0/gle-3.1.0.tar.gz?r=http%3A%2F%2Fsourceforge.net%2Fprojects%2Fgle%2F&ts=1315332658&use_mirror=voxel'
@@ -34,11 +34,34 @@ if sys.hexversion < 0x2070000:
 else:
     VC = 'vc9'
 
+@contextlib.contextmanager
+def whole( target ):
+    """A path beside `target` to write, moved onto `target` once the block ends.
+
+    A block that raises leaves `target` as it was and removes what it wrote,
+    so `target` is never half a file.
+    """
+    partial = target + '.partial'
+    try:
+        yield partial
+        os.replace( partial, target )
+    except BaseException:
+        if os.path.exists( partial ):
+            os.unlink( partial )
+        raise
+
+def copy_whole( source, target ):
+    """Copy `source` to `target`, which is never half a copy."""
+    with whole( target ) as partial:
+        shutil.copyfile( source, partial )  # noqa: OGC121 the path beside target that whole() moves into place
+
 def download_and_unpack():
+    # The archive's presence says it was downloaded, so it appears whole or not at all.
     if not os.path.exists( TAR_FILE ):
         response = requests.get( DOWNLOAD_URL )
         if response.ok:
-            open( TAR_FILE, 'wb').write( response.content )
+            with whole( TAR_FILE ) as partial, open( partial, 'wb') as handle:  # noqa: OGC121 the path beside the archive that whole() moves into place
+                handle.write( response.content )
     if not os.path.exists( GLE_SOURCE_DIR ):
         subprocess.check_call( 'tar -zxvf %(TAR_FILE)s'%globals() )
 
@@ -48,8 +71,8 @@ def size():
 def build():
     current = os.getcwd()
     suffix = size()
-    shutil.copyfile( os.path.join( GLE_SOURCE_DIR, 'ms-visual-c', 'config.h' ), os.path.join(GLE_SOURCE_DIR,'config.h') )
-    shutil.copyfile( os.path.join( GLE_SOURCE_DIR, 'ms-visual-c', 'config.h' ), os.path.join(GLE_SOURCE_DIR,'src','config.h') )
+    copy_whole( os.path.join( GLE_SOURCE_DIR, 'ms-visual-c', 'config.h' ), os.path.join(GLE_SOURCE_DIR,'config.h') )
+    copy_whole( os.path.join( GLE_SOURCE_DIR, 'ms-visual-c', 'config.h' ), os.path.join(GLE_SOURCE_DIR,'src','config.h') )
     os.chdir( os.path.join( GLE_SOURCE_DIR, 'src' ))
     try:
         for file in glob.glob( '*.obj' ):
@@ -70,7 +93,7 @@ def build():
         subprocess.check_call( 'cl -c /D"WIN32" /D "_WINDLL" /Gd /MD *.c' )
         subprocess.check_call( r'link  /LIBPATH:"C:\Program Files\Microsoft Platform SDK\Lib" %(exports)s /DLL /OUT:%(outfile)s opengl32.lib glu32.lib *.obj'%locals() )
 
-        shutil.copyfile( outfile, target )
+        copy_whole( outfile, target )
         print('Created file %(target)s'%locals())
         
     finally:

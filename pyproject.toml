@@ -66,6 +66,12 @@ pyopengl_glut_binaries = ["py.typed", "DLLS/*"]
 testpaths = ["tests", "src"]
 addopts = "-ra --doctest-modules --import-mode=importlib"
 
+[tool.openglcontext-checks]
+# The OGC rules (openglcontext-checks) this project is held to by the
+# workspace preflight: every rule there is, each named, so a rule added
+# later joins when the project is clean of it.
+select = ["OGC131", "OGC141", "OGC161", "OGC201", "OGC221", "OGC222", "OGC223"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py39"
@@ -77,7 +83,16 @@ target-version = "py39"
 exclude = ["tools"]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "B", "ARG", "I", "UP", "SIM", "C4", "RUF"]
+select = [
+    "E", "W", "F", "B", "ARG", "I", "UP", "SIM", "C4", "RUF",
+    "PGH003", "PGH004",  # a type: ignore or noqa names the codes it silences
+    "PLE0604", "PLE0605",  # __all__ is a list or tuple of strings
+    "BLE001", "S110", "S112", "TRY400",  # an error is not swallowed or logged without its traceback
+    "PLC0415",  # imports at the top of the module, not per call
+    "SLF001",  # no reaching into another object's private members
+    "DTZ",  # datetimes carry their time zone
+    "S102", "S202", "S301", "S307", "S310",  # no exec, eval, pickle, unchecked archive members or URL schemes
+]
 ignore = [
     "E501",   # line too long: held by the formatter's line-length, above
     # Diagnostics are written with `%` formatting throughout, so that the

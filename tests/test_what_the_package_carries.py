@@ -126,7 +126,16 @@ class TestWhatTheWheelShips:
             for member in members
             if member.startswith('pyopengl_glut_binaries/DLLS/') and not member.endswith('/')
         )
-        assert shipped == sorted(os.listdir(binaries.DLL_DIRECTORY))
+        platform = _name.rsplit('-', 1)[1].removesuffix('.whl')
+        suffix = {'win32': '32', 'win_amd64': '64', 'win_arm64': 'arm64'}.get(platform)
+        expected = [
+            name
+            for name in os.listdir(binaries.DLL_DIRECTORY)
+            if not name.endswith('.dll')
+            or suffix is None
+            or name.startswith(('freeglut' + suffix + '.', 'gle' + suffix + '.'))
+        ]
+        assert shipped == sorted(expected)
 
     def test_it_is_tagged_for_a_platform(self, wheel):
         """An ``any`` wheel is the state this distribution exists to leave:

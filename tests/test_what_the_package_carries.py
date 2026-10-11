@@ -108,8 +108,7 @@ def wheel(tmp_path_factory):
         text=True,
         timeout=600,
     )
-    if completed.returncode != 0:
-        pytest.skip('this checkout does not build a wheel here: %s' % (completed.stderr[-2000:],))
+    assert completed.returncode == 0, completed.stderr[-2000:]
     built = list(into.glob('*.whl'))
     assert len(built) == 1, built
     with zipfile.ZipFile(built[0]) as handle:

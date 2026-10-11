@@ -37,7 +37,7 @@ DLL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'DLLS')
 #: The libraries carried here, and where each came from.
 LIBRARIES = {
     'freeglut': (
-        "freeglut 3.0.0-1.mp for x86/x64 (Martin Payne), 3.8.0 for ARM64; "
+        'freeglut 3.0.0-1.mp for x86/x64 (Martin Payne), 3.8.0 for ARM64; '
         'upstream publishes source rather than Windows binaries. Not the '
         'original GLUT: these export glutMainLoopEvent and the rest of '
         "freeglut's additions."

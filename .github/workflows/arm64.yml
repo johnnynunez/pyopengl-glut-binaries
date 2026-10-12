@@ -22,6 +22,33 @@ jobs:
           python -m pip install build cmake ninja
           python tools/build_arm64.py --work "${{ runner.temp }}/native-arm64"
           python -m build --wheel -C--build-option=--plat-name=win_arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-win-arm64
+          path: dist/*-win_arm64.whl
+          if-no-files-found: error
+
+  # The same interpreter floor and ceiling as test.yml, except that native
+  # Windows ARM64 CPython starts at 3.11.
+  arm64-smoke:
+    name: ARM64 wheel · ${{ matrix.python-version }}
+    needs: arm64
+    runs-on: windows-11-arm
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: arm64
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel-win-arm64
+          path: dist
       - name: Install and exercise the wheel outside the checkout
         shell: pwsh
         run: |
@@ -35,8 +62,3 @@ jobs:
           Set-Location "${{ runner.temp }}"
           & $python -I smoke_arm64.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheel-win-arm64
-          path: dist/*-win_arm64.whl
-          if-no-files-found: error

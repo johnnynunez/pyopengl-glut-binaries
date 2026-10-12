@@ -64,8 +64,9 @@ The implementations are still the Windows system DLLs; no substitute graphics
 implementation or foreign-architecture library is bundled. The relevant
 mingw-w64 licence travels with the wheel too.
 
-The reusable `arm64.yml` job builds on `windows-11-arm`, installs into a fresh
-environment, then runs `tests/smoke_arm64.py` outside the checkout. It checks the
+The reusable `arm64.yml` job builds on `windows-11-arm`, installs into fresh
+CPython 3.11 and 3.14 environments (the native ARM64 interpreter floor and the
+suite's ceiling), then runs `tests/smoke_arm64.py` outside the checkout. It checks the
 interpreter ABI, exact payload, PE Machine, licences, real DLL loads, FreeGLUT
 init state and GLE state round-trips. It requires **no GPU, window or
 OpenGL context** and makes no rendering claim. It runs for pull requests and
